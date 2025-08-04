@@ -2,3 +2,4 @@
 // TODO: Add validation logic to leave form
 // Fix: Adjust footer alignment on mobile
 // Fix: footer link color update
+// fix: improved header font style
