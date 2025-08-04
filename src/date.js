@@ -3,3 +3,4 @@
 // Fix: Adjust footer alignment on mobile
 // Fix: footer link color update
 // fix: improved header font style
+// fix: improved header font style
