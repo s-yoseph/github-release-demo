@@ -1,0 +1,20 @@
+name-template: 'v$NEXT_PATCH_VERSION'
+tag-template: 'v$NEXT_PATCH_VERSION'
+categories:
+  - title: ✨ New Features
+    labels:
+      - user story
+      - spike
+  - title: 🐛 Bug Fixes
+    labels:
+      - bug
+      - hot fix
+  - title: 🚀 Enhancements
+    labels:
+      - enhancement
+      - dev task
+  - title: 🧰 Maintenance
+    labels:
+      - chore
+change-template: '- $TITLE (@$AUTHOR)'
+no-changes-template: '- No changes.'
