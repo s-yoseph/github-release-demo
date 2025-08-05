@@ -8,4 +8,5 @@
 // src/date.js
 // Fix: Header font weight updated
 // fix: improved header font style
+// Fix: changed the payment logic 
 
