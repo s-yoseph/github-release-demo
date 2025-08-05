@@ -5,3 +5,5 @@
 // fix: improved header font style
 // fix: improved header font style
 // test release
+// src/date.js
+// Fix: Header font weight updated
