@@ -1,4 +1,4 @@
-name-template: 'v$RESOLVED_VERSION 🌈'
+name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
 categories:
@@ -20,6 +20,9 @@ categories:
   - title: '📦 Other'
     labels:
       - 'chore'
+  - title: '📦 Dependency Updates'    
+    labels:
+      - 'dependencies'
 
 change-template: '- $TITLE (#$NUMBER)'  # <--- No @AUTHOR here
 
@@ -39,6 +42,7 @@ version-resolver:
       - 'task'
       - 'dev task'
       - 'chore'
+      - 'dependencies'   
   default: patch
 
 template: |
