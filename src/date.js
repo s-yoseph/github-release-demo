@@ -9,4 +9,5 @@
 // Fix: Header font weight updated
 // fix: improved header font style
 // Fix: changed the payment logic 
-
+// Fix : chnaged the color 
+// Fix : chane the color 
