@@ -1,21 +1,8 @@
-## Issue
-Explain what this PR does.
-
-## Changes Made
+## 🏷️ Issue
 Closes #<issue-number>
 
-## Type of Change
-- [ ] Bug
-- [ ] Enhancement
-- [ ] Hot fix
-- [ ] User story
-- [ ] Spike
-- [ ] Dev task
+## ✨ Changes Made
+- List what was changed in this PR
 
-## Checklist
-- [ ] Code works and runs
-- [ ] Tests (if needed)
-- [ ] Labels added
-
-## Why the change is necessary?
-Explain.
+## ⏳ Remaining Tasks
+- List any work still needed (if any)
