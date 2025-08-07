@@ -1,6 +1,13 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
+template: |
+  # What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
 categories:
   - title: '✨ User Stories'
     labels:
@@ -20,16 +27,12 @@ categories:
   - title: '📦 Other'
     labels:
       - 'chore'
-  - title: '📦 Dependency Updates'    
-    labels:
-      - 'dependencies'
 
-change-template: '- $TITLE (#$NUMBER)'  # <--- No @AUTHOR here
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 
 version-resolver:
   major:
-    labels:
-      - 'breaking'
+    labels: []  # For future (e.g., 'breaking')
   minor:
     labels:
       - 'user story'
@@ -42,10 +45,7 @@ version-resolver:
       - 'task'
       - 'dev task'
       - 'chore'
-      - 'dependencies'   
   default: patch
 
-template: |
-  ## What’s Changed
-
-  $CHANGES
+exclude-labels:
+  - 'skip-changelog'
