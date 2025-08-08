@@ -9,42 +9,34 @@ template: |
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
 
 categories:
-  - title: '✨ User Stories'
-    labels:
-      - 'user story'
-      - 'spike'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'bug'
-      - 'hotfix'
-  - title: '🚀 Enhancements'
+  - title: 'Enhancements'
     labels:
       - 'enhancement'
       - 'dev task'
-  - title: '🧰 Tasks'
+      - 'dev process optimization'
+  - title: 'Bug Fixes'
+    labels:
+      - 'bug'
+      - 'hotfix'
+  - title: 'Tasks'
     labels:
       - 'task'
-  - title: '📦 Other'
-    labels:
-      - 'chore'
 
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-template: '- $LABEL: $TITLE @$AUTHOR (#$NUMBER)'
 
 version-resolver:
   major:
-    labels: []  # For future (e.g., 'breaking')
+    labels: []  # Add major label here if needed
   minor:
     labels:
-      - 'user story'
       - 'enhancement'
-      - 'spike'
+      - 'dev task'
+      - 'dev process optimization'
   patch:
     labels:
       - 'bug'
       - 'hotfix'
       - 'task'
-      - 'dev task'
-      - 'chore'
   default: patch
 
 exclude-labels:
