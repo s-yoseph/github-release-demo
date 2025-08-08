@@ -22,7 +22,7 @@ categories:
     labels:
       - 'task'
 
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-template: '- $CATEGORY: $TITLE @$AUTHOR (#$NUMBER)'
 
 version-resolver:
   major:
