@@ -1,36 +1,43 @@
-name-template: 'v$RESOLVED_VERSION 🌈'
+name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
-categories:
-  - title: '🚀 Features'
-    labels:
-      - 'feature'
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'fix'
-      - 'bugfix'
-      - 'bug'
-  - title: '🧰 Maintenance'
-    labels:
-      - 'chore'
-
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
-
 template: |
-  ## What’s Changed
+  # What's Changed
 
   $CHANGES
 
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: 'Enhancements'
+    labels:
+      - 'enhancement'
+      - 'dev task'
+      - 'dev process optimization'
+  - title: 'Bug Fixes'
+    labels:
+      - 'bug'
+      - 'hotfix'
+  - title: 'Tasks'
+    labels:
+      - 'task'
+
+change-template: '- $LABELS: $TITLE @$AUTHOR (#$NUMBER)'
+
+version-resolver:
+  major:
+    labels: []  # Add major label here if needed
+  minor:
+    labels:
+      - 'enhancement'
+      - 'dev task'
+      - 'dev process optimization'
+  patch:
+    labels:
+      - 'bug'
+      - 'hotfix'
+      - 'task'
+  default: patch
+
+exclude-labels:
+  - 'skip-changelog'
