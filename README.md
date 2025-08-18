@@ -22,3 +22,5 @@ PRs are grouped in release notes by label:
 - **Bug Fixes:** `bug`, `hotfix`  
 - **Tasks:** `task`  
 
+### Excluding PRs
+Label a PR with: `skip-changelog`
