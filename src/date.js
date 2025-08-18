@@ -13,6 +13,15 @@
 // Fix : chane the color 
 // crated form 
 //created login form
-// changed the structure 
-// new changes 
-//enhanced the login page 
+// changed the structure
+// changed the  payment page 
+// chnaged somethings
+// latest
+// last
+// last -latest one 
+// new 
+// new 2
+// new 3
+// new-fix
+
+
