@@ -9,6 +9,9 @@ template: |
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
 
 categories:
+  - title: 'Breaking Changes'
+    labels:
+      - 'major'
   - title: 'Enhancements'
     labels:
       - 'enhancement'
@@ -26,7 +29,8 @@ change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 
 version-resolver:
   major:
-    labels: []  # Add major label here if needed
+    labels: 
+      - 'major'
   minor:
     labels:
       - 'enhancement'
