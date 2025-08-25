@@ -1,0 +1,39 @@
+name: Publish Draft Release
+
+on:
+  release:
+    types: [labeled]   # Trigger when a label is added to a release
+
+permissions:
+  contents: write
+
+jobs:
+  publish-draft:
+    if: github.event.label.name == 'publish'  # Only run for 'publish' label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Publish draft release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release_id = context.payload.release.id;
+            const release = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release_id
+            });
+
+            if (release.data.draft) {
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release_id,
+                draft: false
+              });
+              console.log(`Draft release "${release.data.tag_name}" published!`);
+            } else {
+              console.log("Release is already published.");
+            }
