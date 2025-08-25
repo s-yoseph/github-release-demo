@@ -13,7 +13,7 @@
 // Fix : chane the color 
 // crated form 
 //created login form
-// changed the structure 
+// changed the structure
 // changed the  payment page 
 // chnaged somethings
 // latest
@@ -24,4 +24,3 @@
 // new 3
 // fix-for-pr-labels
 //  checking the publish label 
-
