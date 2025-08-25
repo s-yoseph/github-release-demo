@@ -2,14 +2,16 @@ name: Publish Draft Release
 
 on:
   pull_request:
-    types: [labeled]   # Trigger when a label is added to a PR
+    types: [closed]   # Trigger when a PR is closed (merged or not)
 
 permissions:
   contents: write
 
 jobs:
   publish-draft:
-    if: github.event.label.name == 'publish'  # Only run if the PR label is 'publish'
+    if: >
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'publish')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,4 +42,4 @@ jobs:
               draft: false
             });
 
-            console.log(`Draft release "${draft.tag_name}" published!`);
+            console.log(`✅ Draft release "${draft.tag_name}" published!`);
