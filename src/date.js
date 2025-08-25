@@ -24,3 +24,6 @@
 // new 3
 // fix-for-pr-labels
 //  checking the publish label 
+//  checking the publish label 2
+//  checking the publish label 2 with p
+//  checking the publish label 2
