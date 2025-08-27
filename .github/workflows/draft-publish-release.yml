@@ -14,9 +14,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Job 1 → update the draft release
+  # Job 1 → always update the draft release
   update_release_draft:
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Run Release Drafter
