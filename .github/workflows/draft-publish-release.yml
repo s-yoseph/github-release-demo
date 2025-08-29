@@ -1,17 +1,35 @@
-name: Publish Draft Release
+name: Draft and Publish Release
 
 on:
+  push:
+    branches:
+      - develop
   pull_request:
-    types: [closed]
+    types: [opened, reopened, synchronize, closed]
     branches:
       - develop
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
+  # Job 1 → update the draft release on push/PR activity
+  update_release_draft:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Release Drafter
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 2 → publish the draft, but only after job 1 and only if conditions match
   publish_draft:
+    needs: update_release_draft
     if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
       contains(github.event.pull_request.labels.*.name, 'Publish')
     runs-on: ubuntu-latest
