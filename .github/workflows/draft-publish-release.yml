@@ -1,4 +1,4 @@
-name: Draft and Publish Release
+name: Release Drafter and Publisher
 
 on:
   push:
@@ -12,133 +12,47 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: read
 
 jobs:
-  # Job 1 → Update the draft release
   update_release_draft:
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: github.event_name != 'pull_request' || github.event.action != 'closed' # Skip if PR is closed
     runs-on: ubuntu-latest
     steps:
-      - name: Run Release Drafter
-        uses: release-drafter/release-drafter@v6
+      - uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Log Draft Release Creation
-        run: |
-          echo "Draft release updated or created by release-drafter"
-          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-               -H "Accept: application/vnd.github.v3+json" \
-               https://api.github.com/repos/${{ github.repository }}/releases | jq '.[] | select(.draft) | {tag_name, id}'
 
-  # Job 2 → Publish draft release if merged PR has Publish label
   publish_draft:
-    needs: update_release_draft
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'publish')
     runs-on: ubuntu-latest
     steps:
-      - name: Get last merged PR
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log("Commit SHA:", context.sha);
-            const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha
-            });
-            const prs = response.data;
-            console.log("Found PRs:", prs.map(pr => ({ number: pr.number, merged: pr.merged })));
-            if (prs.length === 0) {
-              console.log("❌ No PRs found for this commit.");
-              core.setOutput("publish", "false");
-              return;
-            }
-            const pr = prs[0];
-            console.log("Checking PR #", pr.number, "Merged:", pr.merged);
-            if (!pr.merged) {
-              console.log("❌ PR is not merged, skipping publish.");
-              core.setOutput("publish", "false");
-              return;
-            }
-            const labels = pr.labels.map(l => l.name);
-            console.log("PR Labels:", labels);
-            const hasPublish = labels.some(l => l.name.toLowerCase() === 'publish');
-            console.log("Has Publish label:", hasPublish);
-            core.setOutput("publish", hasPublish ? "true" : "false");
-            core.setOutput("pr_number", pr.number);
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check for draft release
-        if: steps.pr.outputs.publish == 'true'
-        id: draft_check
+      - name: Publish latest draft release
         uses: actions/github-script@v7
         with:
           script: |
-            console.log("Checking for draft release...");
             const releases = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo
             });
+
             const draft = releases.data.find(r => r.draft);
             if (!draft) {
-              console.log("❌ No draft release found to publish.");
-              core.setFailed("No draft release found.");
+              core.setFailed("No draft release found to publish.");
               return;
             }
-            console.log("Found draft release:", draft.tag_name, "ID:", draft.id);
-            core.setOutput("release_id", draft.id);
-            core.setOutput("tag_name", draft.tag_name);
 
-      - name: Create fallback draft release (if none exists)
-        if: steps.pr.outputs.publish == 'true' && steps.draft_check.outcome != 'success'
-        id: create_draft
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log("No draft found, creating a fallback draft release...");
-            try {
-              const newDraft = await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: `v${Date.now()}`,
-                name: `Fallback Draft Release ${Date.now()}`,
-                body: "Auto-generated draft release due to missing draft",
-                draft: true
-              });
-              console.log("Created fallback draft release:", newDraft.data.tag_name, "ID:", newDraft.data.id);
-              core.setOutput("release_id", newDraft.data.id);
-              core.setOutput("tag_name", newDraft.data.tag_name);
-            } catch (error) {
-              console.log("❌ Failed to create fallback draft release:", error.message);
-              core.setFailed(`Failed to create draft release: ${error.message}`);
-            }
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: draft.id,
+              draft: false
+            });
 
-      - name: Publish latest draft release
-        if: steps.pr.outputs.publish == 'true' && (steps.draft_check.outcome == 'success' || steps.create_draft.outcome == 'success')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const releaseId = ${{ steps.draft_check.outputs.release_id || steps.create_draft.outputs.release_id }};
-            const tagName = ${{ steps.draft_check.outputs.tag_name || steps.create_draft.outputs.tag_name }};
-            console.log(`Attempting to publish release: ${tagName} (ID: ${releaseId})`);
-            let attempts = 3;
-            while (attempts > 0) {
-              try {
-                await github.rest.repos.updateRelease({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: releaseId,
-                  draft: false
-                });
-                console.log(`✅ Draft release "${tagName}" published successfully!`);
-                break;
-              } catch (error) {
-                console.log(`❌ Error publishing release (attempt ${4 - attempts}):`, error.message);
-                attempts--;
-                if (attempts === 0) {
-                  core.setFailed(`Failed to publish release after 3 attempts: ${error.message}`);
-                }
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            }
+            console.log(`✅ Draft release "${draft.tag_name}" published!`);
