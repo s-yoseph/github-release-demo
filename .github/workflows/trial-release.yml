@@ -102,6 +102,7 @@ jobs:
  
       - name: Debug PR labels
         run: |
+          echo "Merged: ${{ github.event.pull_request.merged }}"
           echo "PR labels: ${{ toJSON(github.event.pull_request.labels) }}"
  
       - name: Check API rate limit
