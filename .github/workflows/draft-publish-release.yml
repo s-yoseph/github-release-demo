@@ -45,7 +45,7 @@ jobs:
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
 
                -H "Accept: application/vnd.github.v3+json" \
-https://api.github.com/repos/${{ github.repository }}/releases
+               https://api.github.com/repos/${{ github.repository }}/releases
  
   publish_draft:
 
@@ -82,7 +82,7 @@ https://api.github.com/repos/${{ github.repository }}/releases
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
 
                -H "Accept: application/vnd.github.v3+json" \
-https://api.github.com/rate_limit
+                https://api.github.com/rate_limit
 
       - name: Publish latest draft release
 
