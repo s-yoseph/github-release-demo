@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - develop
-  pull_request_target:  # Use this for conflict-proofing; fallback to pull_request if needed
+  pull_request:  # Use this for conflict-proofing; fallback to pull_request if needed
     types: [opened, reopened, synchronize, closed]
     branches:
       - develop
