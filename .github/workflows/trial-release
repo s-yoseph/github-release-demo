@@ -1,62 +1,155 @@
-name: trail
+name: Trial Release Drafter and Publisher
+ 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - develop
-  pull_request:  # Use this for conflict-proofing; fallback to pull_request if needed
-    types: [opened, reopened, synchronize, closed]
-    branches:
-      - develop
-  workflow_dispatch:  # For manual testing
+ 
 permissions:
   contents: write
   pull-requests: write
+ 
 jobs:
-  update_release_draft:
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request_target' &&
-       github.event.action != 'closed')
+  draft_release:
+    if: >
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.labels.*.name, 'major') ||
+       contains(github.event.pull_request.labels.*.name, 'enhancement') ||
+       contains(github.event.pull_request.labels.*.name, 'dev task') ||
+       contains(github.event.pull_request.labels.*.name, 'dev process optimization') ||
+       contains(github.event.pull_request.labels.*.name, 'bug') ||
+       contains(github.event.pull_request.labels.*.name, 'hotfix') ||
+       contains(github.event.pull_request.labels.*.name, 'task'))
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for version calculation
+ 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+ 
+      - name: Install semver
+        run: npm install semver
+ 
+      - name: Calculate new version
+        id: version
+        run: |
+          # Get the latest release tag
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "Latest tag: $LATEST_TAG"
+ 
+          # Extract labels from PR
+          LABELS=$(jq -r '.labels[].name' <<< "${{ toJSON(github.event.pull_request.labels) }}")
+          echo "PR labels: $LABELS"
+ 
+          # Determine version increment
+          INCREMENT="patch"
+          if echo "$LABELS" | grep -E '^major$'; then
+            INCREMENT="major"
+          elif echo "$LABELS" | grep -E '^(enhancement|dev task|dev process optimization)$'; then
+            INCREMENT="minor"
+          elif echo "$LABELS" | grep -E '^(bug|hotfix|task)$'; then
+            INCREMENT="patch"
+          fi
+          echo "Increment type: $INCREMENT"
+ 
+          # Calculate new version
+          NEW_VERSION=$(node -p "require('semver').inc('$LATEST_TAG'.replace(/^v/, ''), '$INCREMENT')")
+          NEW_TAG="v$NEW_VERSION"
+          echo "New tag: $NEW_TAG"
+ 
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+ 
+      - name: Update or create draft release
+        uses: release-drafter/release-drafter@v6
+        with:
+          config-name: release-drafter.yml
+          version: ${{ steps.version.outputs.new_version }}
+          tag: ${{ steps.version.outputs.new_tag }}
+          name: ${{ steps.version.outputs.new_tag }}
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ 
       - name: Debug draft releases
         run: |
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                -H "Accept: application/vnd.github.v3+json" \
                https://api.github.com/repos/${{ github.repository }}/releases
-  debug_pr_close:  # NEW: Always runs on closed to inspect why it skips
-    if: |
-      github.event_name == 'pull_request_target' &&
-      github.event.action == 'closed'
+ 
+  publish_release:
+    needs: draft_release
+    if: >
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'publish')
     runs-on: ubuntu-latest
     steps:
-      - name: Debug full PR event
+      - name: Checkout repository
+        uses: actions/checkout@v4
+ 
+      - name: Debug PR labels
         run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Action: ${{ github.event.action }}"
-          echo "Merged: ${{ github.event.pull_request.merged }}"
-          echo "Base branch: ${{ github.event.pull_request.base.ref }}"
-          echo "Has conflicts? (manual check needed; see PR UI)"
-          echo "All labels: ${{ toJSON(github.event.pull_request.labels) }}"
-          echo "Has 'publish' label: ${{ contains(fromJson(toJSON(github.event.pull_request.labels)).*.name, 'publish') }}"
-          echo "Full event payload snippet:"
-          echo "${{ toJSON(github.event.pull_request) }}" | jq '.'  # Requires jq; assumes ubuntu-latest has it
-      - name: Check branch protections
+          echo "PR labels: ${{ toJSON(github.event.pull_request.labels) }}"
+ 
+      - name: Check API rate limit
         run: |
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                -H "Accept: application/vnd.github.v3+json" \
-               https://api.github.com/repos/${{ github.repository }}/branches/develop/protection
-  publish_draft:
-    needs: debug_pr_close  # Run after debug for context
-    if: |
-      github.event_name == 'pull_request_target' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
-      contains(fromJson(toJSON(github.event.pull_request.labels)).*.name, 'publish')
-    runs-on: ubuntu-latest
-    steps:
-      # ... (keep your existing steps: checkout, debug labels, rate limit, publish script)
-      # In publish script, add: console.log(`Merged: ${context.payload.pull_request.merged}`);
+                https://api.github.com/rate_limit
+ 
+      - name: Publish draft release and update previous releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const releases = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+ 
+              // Find the draft release
+              const draft = releases.data.find(r => r.draft);
+              if (!draft) {
+                core.setFailed("No draft release found to publish.");
+                return;
+              }
+ 
+              console.log(`Found draft release: ${draft.tag_name} (ID: ${draft.id})`);
+ 
+              // Update all previous non-draft releases to remove "(Latest)" from title
+              for (const release of releases.data.filter(r => !r.draft)) {
+                if (release.name && release.name.includes("(Latest)")) {
+                  const newName = release.name.replace(" (Latest)", "");
+                  await github.rest.repos.updateRelease({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    release_id: release.id,
+                    name: newName
+                  });
+                  console.log(`Removed '(Latest)' from release: ${release.tag_name} (ID: ${release.id})`);
+                }
+              }
+ 
+              // Publish the draft release with "(Latest)" in the title
+              const response = await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: draft.id,
+                draft: false,
+                name: `${draft.tag_name} (Latest)`
+              });
+ 
+              console.log(`API response: ${JSON.stringify(response.data, null, 2)}`);
+              console.log(`✅ Draft release "${draft.tag_name}" published as Latest!`);
+            } catch (error) {
+              core.setFailed(`Failed to publish release: ${error.message}`);
+            }
