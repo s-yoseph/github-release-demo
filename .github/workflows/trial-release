@@ -2,7 +2,7 @@ name: Trial Release Drafter and Publisher
  
 on:
   pull_request:
-    types: [closed]
+    types: [opened, reopened, synchronize, closed]
     branches:
       - develop
  
