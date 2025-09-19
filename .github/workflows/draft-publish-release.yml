@@ -10,7 +10,7 @@ on:
       - develop
 
 permissions:
-  contents: write
+  contents: read-write
   pull-requests: write
 
 jobs:
