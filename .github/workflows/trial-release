@@ -1,26 +1,25 @@
-name: Release Drafter and Publisher
+name: trail
 on:
   push:
     branches:
       - develop
-  pull_request:
+  pull_request_target:  # Use this for conflict-proofing; fallback to pull_request if needed
     types: [opened, reopened, synchronize, closed]
     branches:
       - develop
+  workflow_dispatch:  # For manual testing
 permissions:
   contents: write
   pull-requests: write
 jobs:
   update_release_draft:
-    # Run on pushes to develop, and on PR open/reopen/sync (but not closed)
     if: |
       github.event_name == 'push' ||
-      (github.event_name == 'pull_request' &&
+      (github.event_name == 'pull_request_target' &&
        github.event.action != 'closed')
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@v5
-        id: release_drafter  # Optional: Capture outputs like 'tag_name'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Debug draft releases
@@ -28,51 +27,36 @@ jobs:
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                -H "Accept: application/vnd.github.v3+json" \
                https://api.github.com/repos/${{ github.repository }}/releases
-  publish_draft:
-    # Run only on merged PR to develop with exact 'publish' label
+  debug_pr_close:  # NEW: Always runs on closed to inspect why it skips
     if: |
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
-      (fromJson(github.event.pull_request.labels).*.name) includes 'publish'
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Debug PR labels
+      - name: Debug full PR event
         run: |
-          echo "PR labels: ${{ toJSON(github.event.pull_request.labels) }}"
-      - name: Check API rate limit
+          echo "Event name: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Merged: ${{ github.event.pull_request.merged }}"
+          echo "Base branch: ${{ github.event.pull_request.base.ref }}"
+          echo "Has conflicts? (manual check needed; see PR UI)"
+          echo "All labels: ${{ toJSON(github.event.pull_request.labels) }}"
+          echo "Has 'publish' label: ${{ contains(fromJson(toJSON(github.event.pull_request.labels)).*.name, 'publish') }}"
+          echo "Full event payload snippet:"
+          echo "${{ toJSON(github.event.pull_request) }}" | jq '.'  # Requires jq; assumes ubuntu-latest has it
+      - name: Check branch protections
         run: |
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                -H "Accept: application/vnd.github.v3+json" \
-                https://api.github.com/rate_limit
-      - name: Publish latest draft release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            try {
-              const releases = await github.rest.repos.listReleases({
-                owner: context.repo.owner,
-                repo: context.repo.repo
-              });
-              // Filter for RD's active untagged draft (adjust 'Next Release' to match your name-template if customized)
-              const draft = releases.data.find(r => r.draft && !r.tag_name && r.name.startsWith('Next Release'));
-              if (!draft) {
-                core.setFailed("No untagged draft release found to publish. Check if Release Drafter created one.");
-                return;
-              }
-              console.log(`Found draft release: ${draft.name} (ID: ${draft.id})`);
-              const response = await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: draft.id,
-                draft: false,
-                tag_name: draft.name.replace('Next Release', 'v'),  // Optional: Set tag to version (e.g., 'v1.2.3')
-                make_latest: true  // Mark as latest
-              });
-              console.log(`API response: ${JSON.stringify(response.data, null, 2)}`);
-              console.log(`✅ Draft release "${draft.name}" published!`);
-            } catch (error) {
-              core.setFailed(`Failed to publish release: ${error.message}`);
-            }
+               https://api.github.com/repos/${{ github.repository }}/branches/develop/protection
+  publish_draft:
+    needs: debug_pr_close  # Run after debug for context
+    if: |
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      contains(fromJson(toJSON(github.event.pull_request.labels)).*.name, 'publish')
+    runs-on: ubuntu-latest
+    steps:
+      # ... (keep your existing steps: checkout, debug labels, rate limit, publish script)
+      # In publish script, add: console.log(`Merged: ${context.payload.pull_request.merged}`);
